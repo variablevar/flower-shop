@@ -61,11 +61,17 @@ pub trait Generic<
         id: &str,
         updated_resource: &T,
         collection: &Collection<T>,
-    ) -> Result<(), mongodb::error::Error> {
+    ) -> Result<Option<T>, mongodb::error::Error> {
         let filter = doc! { "_id": object_id(&id) };
         let serialized_updated_updated = doc! {"$set":updated_resource};
-        collection.find_one_and_update(filter, serialized_updated_updated, None)?;
-        Ok(())
+
+        if let Some(document) =
+            collection.find_one_and_update(filter, serialized_updated_updated, None)?
+        {
+            Ok(Some(document))
+        } else {
+            Ok(None)
+        }
     }
 
     // Delete resource from MongoDB

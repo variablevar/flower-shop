@@ -18,7 +18,13 @@ use controllers::{
     },
 };
 use database::mongo::MongoDBState;
-use etc::cors::CORS;
+use etc::{
+    catchers::{
+        bad_request_error, conflict_error, internal_server_error, not_found_error,
+        unauthorized_error, unprocessable_entity_error,
+    },
+    cors::CORS,
+};
 use rocket::{http::Status, serde::json::Json};
 
 extern crate serde;
@@ -36,6 +42,17 @@ fn hello() -> Result<Json<String>, Status> {
 async fn rocket() -> _ {
     rocket::build()
         .attach(CORS)
+        .register(
+            "/",
+            rocket::catchers![
+                unauthorized_error,
+                bad_request_error,
+                not_found_error,
+                unprocessable_entity_error,
+                conflict_error,
+                internal_server_error
+            ],
+        )
         .manage(MongoDBState::init())
         .mount("/", routes![hello])
         .mount(

@@ -1,11 +1,14 @@
 use mongodb::sync::Collection;
-use rocket::{serde::json::Json, State};
-use serde_json::json;
+use rocket::{http::Status, serde::json::Json, State};
 
 use crate::{
     constants::strings::ADDRESSES,
     database::mongo::MongoDBState,
-    model::user_address::{UserAddress, UserAddresses},
+    guards::jwt_token::JwtToken,
+    model::{
+        user_address::{UserAddress, UserAddresses},
+        wrapper::ResponseWrapper,
+    },
     services::generic::Generic,
 };
 
@@ -13,17 +16,25 @@ use crate::{
 pub fn create_user_addresses(
     user_addresses: Json<UserAddresses>,
     db: &State<MongoDBState>,
-) -> serde_json::Value {
-    // Get the user_addresss collection
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<String>> {
+    // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
 
     // Insert the document into MongoDB
     match UserAddress::insert_multiple_resource(&user_addresses.0, &collection) {
-        Ok(_) => {
-            json!({ "status": "success", "response": "UserAddresss were created successfully" })
-        }
-        Err(_) => json!({ "status": "failed", "message": "Failed to create user_address" }),
+        Ok(_) => Json(ResponseWrapper::new(
+            Status::Ok,
+            String::from("UserAddresses were created successfully"),
+        )),
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Creating user_address , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
@@ -31,41 +42,82 @@ pub fn create_user_addresses(
 pub fn create_user_address(
     user_address: Json<UserAddress>,
     db: &State<MongoDBState>,
-) -> serde_json::Value {
-    // Get the user_addresss collection
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<String>> {
+    // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
 
     // Insert the document into MongoDB
     match UserAddress::insert_resource(&user_address.0, &collection) {
-        Ok(_) => json!({ "status": "success", "response": "UserAddress Created successfully" }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to create user_address" }),
+        Ok(_) => Json(ResponseWrapper::new(
+            Status::Ok,
+            String::from("UserAddress Created successfully"),
+        )),
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Creating user_address , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
 #[get("/<id>")]
-pub fn get_user_address(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
-    // Get the user_addresss collection
+pub fn get_user_address<'a>(
+    id: &str,
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<UserAddress>> {
+    // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
 
     // Get the document of user_address into MongoDB
     match UserAddress::find_resource_by_id(id, &collection) {
-        Ok(user_address) => json!({ "status": "success", "response": user_address.unwrap() }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to get user_address" }),
+        Ok(db_user_address) => match db_user_address {
+            Some(user_address) => Json(ResponseWrapper::new(Status::Ok, user_address)),
+            None => Json(ResponseWrapper::message(
+                Status::NotFound,
+                format!("UserAddress not found with id , {}", id),
+            )),
+        },
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Getting user_address , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
 #[get("/")]
-pub fn get_user_addresses(db: &State<MongoDBState>) -> serde_json::Value {
-    // Get the user_addresss collection
+pub fn get_user_addresses(
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<UserAddresses>> {
+    // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
 
-    // Get the documents of user_addresss into MongoDB
+    // Get the documents of user_addresses into MongoDB
     match UserAddress::find_resources(&collection) {
-        Ok(user_addresss) => json!({ "status": "success", "response": user_addresss.unwrap() }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to get user_addresss" }),
+        Ok(db_user_addresses) => match db_user_addresses {
+            Some(user_addresses) => Json(ResponseWrapper::new(Status::Accepted, user_addresses)),
+            None => Json(ResponseWrapper::message(
+                Status::NotFound,
+                format!("UserAddresses Not Found"),
+            )),
+        },
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Getting user_address , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
@@ -74,32 +126,60 @@ pub fn update_user_address(
     id: &str,
     user_address: Json<UserAddress>,
     db: &State<MongoDBState>,
-) -> serde_json::Value {
-    // Get the user_addresss collection
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<UserAddress>> {
+    // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
 
     // Update the document into MongoDB
     match UserAddress::update_resource(id, &user_address.0, &collection) {
-        Ok(_) => json!({ "status": "success", "response": "UserAddress updated successfully" }),
-        Err(err) => json!({ "status": "failed", "message": err.to_string() }),
+        Ok(db_user_address) => match db_user_address {
+            Some(user_address) => Json(ResponseWrapper::new(Status::Ok, user_address)),
+            None => Json(ResponseWrapper::message(
+                Status::NotFound,
+                format!("UserAddress not found with id , {}", id),
+            )),
+        },
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Updating user_address , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 #[delete("/<id>")]
-pub fn delete_user_address(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
-    // Get the user_addresss collection
+pub fn delete_user_address(
+    id: &str,
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<String>> {
+    // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
 
     // Delete the document into MongoDB
     match UserAddress::delete_resource(id, &collection) {
-        Ok(_) => json!({ "status": "success", "response": "UserAddress Deleted successfully" }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to delete user_address" }),
+        Ok(_) => Json(ResponseWrapper::message(
+            Status::Ok,
+            format!("UserAddress deleted successfully"),
+        )),
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Getting user_address , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use serde_json::json;
 
     use super::*;
 

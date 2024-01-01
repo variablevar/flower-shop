@@ -1,65 +1,123 @@
 use mongodb::sync::Collection;
-use rocket::{serde::json::Json, State};
-use serde_json::json;
+use rocket::{http::Status, serde::json::Json, State};
 
 use crate::{
     constants::strings::PRODUCTS,
     database::mongo::MongoDBState,
-    model::product::{Product, Products},
+    guards::jwt_token::JwtToken,
+    model::{
+        product::{Product, Products},
+        wrapper::ResponseWrapper,
+    },
     services::generic::Generic,
 };
 
 #[post("/many", format = "json", data = "<products>")]
-pub fn create_products(products: Json<Products>, db: &State<MongoDBState>) -> serde_json::Value {
+pub fn create_products(
+    products: Json<Products>,
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<String>> {
     // Get the products collection
     let db = db.inner().db();
     let collection: Collection<Product> = db.collection::<Product>(PRODUCTS);
 
     // Insert the document into MongoDB
     match Product::insert_multiple_resource(&products.0, &collection) {
-        Ok(_) => {
-            json!({ "status": "success", "response": "Products were created successfully" })
-        }
-        Err(_) => json!({ "status": "failed", "message": "Failed to create product" }),
+        Ok(_) => Json(ResponseWrapper::new(
+            Status::Ok,
+            String::from("Products were created successfully"),
+        )),
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Creating product , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
 #[post("/", format = "json", data = "<product>")]
-pub fn create_product(product: Json<Product>, db: &State<MongoDBState>) -> serde_json::Value {
+pub fn create_product(
+    product: Json<Product>,
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<String>> {
     // Get the products collection
     let db = db.inner().db();
     let collection: Collection<Product> = db.collection::<Product>(PRODUCTS);
 
     // Insert the document into MongoDB
     match Product::insert_resource(&product.0, &collection) {
-        Ok(_) => json!({ "status": "success", "response": "Product Created successfully" }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to create product" }),
+        Ok(_) => Json(ResponseWrapper::new(
+            Status::Ok,
+            String::from("Product Created successfully"),
+        )),
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Creating product , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
 #[get("/<id>")]
-pub fn get_product(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
+pub fn get_product<'a>(
+    id: &str,
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<Product>> {
     // Get the products collection
     let db = db.inner().db();
     let collection: Collection<Product> = db.collection::<Product>(PRODUCTS);
 
     // Get the document of product into MongoDB
     match Product::find_resource_by_id(id, &collection) {
-        Ok(product) => json!({ "status": "success", "response": product.unwrap() }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to get product" }),
+        Ok(db_product) => match db_product {
+            Some(product) => Json(ResponseWrapper::new(Status::Ok, product)),
+            None => Json(ResponseWrapper::message(
+                Status::NotFound,
+                format!("Product not found with id , {}", id),
+            )),
+        },
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Getting product , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
 #[get("/")]
-pub fn get_products(db: &State<MongoDBState>) -> serde_json::Value {
+pub fn get_products(
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<Products>> {
     // Get the products collection
     let db = db.inner().db();
     let collection: Collection<Product> = db.collection::<Product>(PRODUCTS);
 
     // Get the documents of products into MongoDB
     match Product::find_resources(&collection) {
-        Ok(products) => json!({ "status": "success", "response": products.unwrap() }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to get products" }),
+        Ok(db_products) => match db_products {
+            Some(products) => Json(ResponseWrapper::new(Status::Accepted, products)),
+            None => Json(ResponseWrapper::message(
+                Status::NotFound,
+                format!("Products Not Found"),
+            )),
+        },
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Getting product , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
@@ -68,32 +126,60 @@ pub fn update_product(
     id: &str,
     product: Json<Product>,
     db: &State<MongoDBState>,
-) -> serde_json::Value {
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<Product>> {
     // Get the products collection
     let db = db.inner().db();
     let collection: Collection<Product> = db.collection::<Product>(PRODUCTS);
 
     // Update the document into MongoDB
     match Product::update_resource(id, &product.0, &collection) {
-        Ok(_) => json!({ "status": "success", "response": "Product updated successfully" }),
-        Err(err) => json!({ "status": "failed", "message": err.to_string() }),
+        Ok(db_product) => match db_product {
+            Some(product) => Json(ResponseWrapper::new(Status::Ok, product)),
+            None => Json(ResponseWrapper::message(
+                Status::NotFound,
+                format!("Product not found with id , {}", id),
+            )),
+        },
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Updating product , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 #[delete("/<id>")]
-pub fn delete_product(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
+pub fn delete_product(
+    id: &str,
+    db: &State<MongoDBState>,
+    _middleware: JwtToken,
+) -> Json<ResponseWrapper<String>> {
     // Get the products collection
     let db = db.inner().db();
     let collection: Collection<Product> = db.collection::<Product>(PRODUCTS);
 
     // Delete the document into MongoDB
     match Product::delete_resource(id, &collection) {
-        Ok(_) => json!({ "status": "success", "response": "Product Deleted successfully" }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to delete product" }),
+        Ok(_) => Json(ResponseWrapper::message(
+            Status::Ok,
+            format!("Product deleted successfully"),
+        )),
+        Err(err) => Json(ResponseWrapper::message(
+            Status::NotFound,
+            format!(
+                "Something Went Wrong While Getting product , {}",
+                err.to_string()
+            ),
+        )),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
 
     #[test]

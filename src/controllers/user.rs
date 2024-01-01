@@ -20,7 +20,7 @@ pub fn register(user: Json<User>, db: &State<MongoDBState>) -> serde_json::Value
     match User::insert_resource(&user, &collection) {
         Ok(_) => json!({ "status": "success", "response": "User Created successfully" }),
         Err(err) => {
-            json!({ "status": "failed", "message": format!("Failed to create user , {}",err.to_string()) })
+            json!({ "status": "failed", "response": format!("Failed to create user , {}",err.to_string()) })
         }
     }
 }
@@ -34,7 +34,7 @@ pub fn get_user(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
     // Get the document of user into MongoDB
     match User::find_resource_by_id(id, &collection) {
         Ok(user) => json!({ "status": "success", "response": user.unwrap() }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to get user" }),
+        Err(_) => json!({ "status": "failed", "response": "Failed to get user" }),
     }
 }
 
@@ -53,7 +53,7 @@ pub fn login(login: Json<Login>, db: &State<MongoDBState>) -> serde_json::Value 
                 return json!({ "status": "success", "response": { "token":token } });
             }
         }
-        Err(err) => json!({ "status": "failed", "message": err.to_string()}),
+        Err(err) => json!({ "status": "failed", "response": err.to_string()}),
     }
 }
 
@@ -66,7 +66,7 @@ pub fn update_user(id: &str, user: Json<User>, db: &State<MongoDBState>) -> serd
     // Update the document into MongoDB
     match User::update_resource(id, &user.0, &collection) {
         Ok(_) => json!({ "status": "success", "response": "User updated successfully" }),
-        Err(err) => json!({ "status": "failed", "message": err.to_string() }),
+        Err(err) => json!({ "status": "failed", "response": err.to_string() }),
     }
 }
 #[delete("/<id>")]
@@ -78,7 +78,7 @@ pub fn delete_user(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
     // Delete the document into MongoDB
     match User::delete_resource(id, &collection) {
         Ok(_) => json!({ "status": "success", "response": "User Deleted successfully" }),
-        Err(_) => json!({ "status": "failed", "message": "Failed to delete user" }),
+        Err(_) => json!({ "status": "failed", "response": "Failed to delete user" }),
     }
 }
 
