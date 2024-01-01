@@ -1,0 +1,21 @@
+[package]
+name = "flower-shop"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rocket = { version = "0.5.0-rc.2", features = ["json"] }
+serde = { version = "1.0.136" }
+serde_json = { version = "1.0.108" }
+serde_derive = { version = "1.0.193" }
+regex = { version = "1.10.2" }
+jsonwebtoken = { version = "9.2.0" }
+bcrypt = { version = "0.15.0" }
+dotenv = "0.15.0"
+
+[dependencies.mongodb]
+version = "2.2.0"
+default-features = false
+features = ["sync"]
