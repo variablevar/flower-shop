@@ -1,13 +1,45 @@
 use mongodb::{bson::doc, sync::Collection};
-use rocket::{serde::json::Json, State};
+use rocket::{http::Status, serde::json::Json, State};
 use serde_json::json;
 
 use crate::{
     constants::strings::USERS,
     database::mongo::MongoDBState,
-    model::user::{Login, User},
+    guards::jwt_token::JwtToken,
+    model::{
+        user::{ChangePassword, Login, User},
+        wrapper::ResponseWrapper,
+    },
     services::generic::Generic,
 };
+#[post("/change-password", format = "json", data = "<password>")]
+pub fn change_password(
+    password: Json<ChangePassword>,
+    db: &State<MongoDBState>,
+    middleware: JwtToken,
+) -> Json<ResponseWrapper<String>> {
+    // Get the users collection
+    let db = db.inner().db();
+    let collection: Collection<User> = db.collection::<User>(USERS);
+
+    // Change password in MongoDB
+    match User::change_password(&middleware.0.sub, password.0, &collection) {
+        Ok(user) => match user {
+            Some(_) => Json(ResponseWrapper::new(
+                Status::Accepted,
+                String::from("Password changed successfully"),
+            )),
+            None => Json(ResponseWrapper::message(
+                Status::UnprocessableEntity,
+                String::from("Unable to change pasword"),
+            )),
+        },
+        Err(_) => Json(ResponseWrapper::message(
+            Status::InternalServerError,
+            format!("Failed to change password"),
+        )),
+    }
+}
 
 #[post("/register", format = "json", data = "<user>")]
 pub fn register(user: Json<User>, db: &State<MongoDBState>) -> serde_json::Value {
@@ -25,14 +57,14 @@ pub fn register(user: Json<User>, db: &State<MongoDBState>) -> serde_json::Value
     }
 }
 
-#[get("/<id>")]
-pub fn get_user(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
+#[get("/")]
+pub fn get_user(db: &State<MongoDBState>, middleware: JwtToken) -> serde_json::Value {
     // Get the users collection
     let db = db.inner().db();
     let collection: Collection<User> = db.collection::<User>(USERS);
 
     // Get the document of user into MongoDB
-    match User::find_resource_by_id(id, &collection) {
+    match User::find_resource_by_id(&middleware.0.sub, &collection) {
         Ok(user) => json!({ "status": "success", "response": user.unwrap() }),
         Err(_) => json!({ "status": "failed", "response": "Failed to get user" }),
     }
@@ -57,26 +89,30 @@ pub fn login(login: Json<Login>, db: &State<MongoDBState>) -> serde_json::Value 
     }
 }
 
-#[put("/<id>", format = "json", data = "<user>")]
-pub fn update_user(id: &str, user: Json<User>, db: &State<MongoDBState>) -> serde_json::Value {
+#[put("/", format = "json", data = "<user>")]
+pub fn update_user(
+    user: Json<User>,
+    db: &State<MongoDBState>,
+    middleware: JwtToken,
+) -> serde_json::Value {
     // Get the users collection
     let db = db.inner().db();
     let collection: Collection<User> = db.collection::<User>(USERS);
 
     // Update the document into MongoDB
-    match User::update_resource(id, &user.0, &collection) {
+    match User::update_resource(&middleware.0.sub, &user.0, &collection) {
         Ok(_) => json!({ "status": "success", "response": "User updated successfully" }),
         Err(err) => json!({ "status": "failed", "response": err.to_string() }),
     }
 }
-#[delete("/<id>")]
-pub fn delete_user(id: &str, db: &State<MongoDBState>) -> serde_json::Value {
+#[delete("/")]
+pub fn delete_user(db: &State<MongoDBState>, middleware: JwtToken) -> serde_json::Value {
     // Get the users collection
     let db = db.inner().db();
     let collection: Collection<User> = db.collection::<User>(USERS);
 
     // Delete the document into MongoDB
-    match User::delete_resource(id, &collection) {
+    match User::delete_resource(&middleware.0.sub, &collection) {
         Ok(_) => json!({ "status": "success", "response": "User Deleted successfully" }),
         Err(_) => json!({ "status": "failed", "response": "Failed to delete user" }),
     }

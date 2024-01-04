@@ -11,7 +11,7 @@ use controllers::{
     product::{
         create_product, create_products, delete_product, get_product, get_products, update_product,
     },
-    user::{delete_user, get_user, login, register, update_user},
+    user::{change_password, delete_user, get_user, login, register, update_user},
     user_address::{
         create_user_address, create_user_addresses, delete_user_address, get_user_address,
         get_user_addresses, update_user_address,
@@ -25,7 +25,6 @@ use etc::{
     },
     cors::CORS,
 };
-use rocket::{http::Status, serde::json::Json};
 
 extern crate serde;
 extern crate serde_derive;
@@ -33,15 +32,10 @@ extern crate serde_json;
 #[macro_use]
 extern crate rocket;
 
-#[get("/hello")]
-fn hello() -> Result<Json<String>, Status> {
-    Ok(Json(String::from("Hello  World")))
-}
-
-#[launch]
-async fn rocket() -> _ {
+#[rocket::main]
+async fn main() {
     rocket::build()
-        .attach(CORS)
+        .attach(CORS::init())
         .register(
             "/",
             rocket::catchers![
@@ -54,7 +48,6 @@ async fn rocket() -> _ {
             ],
         )
         .manage(MongoDBState::init())
-        .mount("/", routes![hello])
         .mount(
             format!("/{}", PRODUCTS),
             routes![
@@ -79,7 +72,14 @@ async fn rocket() -> _ {
         )
         .mount(
             format!("/{}", USERS),
-            routes![register, login, get_user, update_user, delete_user],
+            routes![
+                register,
+                login,
+                get_user,
+                update_user,
+                delete_user,
+                change_password
+            ],
         )
         .mount(
             format!("/{}", ADDRESSES),
@@ -92,4 +92,7 @@ async fn rocket() -> _ {
                 delete_user_address
             ],
         )
+        .launch()
+        .await
+        .unwrap();
 }

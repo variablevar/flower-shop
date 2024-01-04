@@ -1,11 +1,17 @@
-use mongodb::sync::Collection;
+use std::str::FromStr;
+
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    sync::Collection,
+};
 use rocket::{http::Status, serde::json::Json, State};
 
 use crate::{
-    constants::strings::ADDRESSES,
+    constants::strings::{ADDRESSES, USERS},
     database::mongo::MongoDBState,
     guards::jwt_token::JwtToken,
     model::{
+        user::User,
         user_address::{UserAddress, UserAddresses},
         wrapper::ResponseWrapper,
     },
@@ -42,18 +48,37 @@ pub fn create_user_addresses(
 pub fn create_user_address(
     user_address: Json<UserAddress>,
     db: &State<MongoDBState>,
-    _middleware: JwtToken,
+    middleware: JwtToken,
 ) -> Json<ResponseWrapper<String>> {
     // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
+    let user_collection: Collection<User> = db.collection::<User>(USERS);
 
     // Insert the document into MongoDB
     match UserAddress::insert_resource(&user_address.0, &collection) {
-        Ok(_) => Json(ResponseWrapper::new(
-            Status::Ok,
-            String::from("UserAddress Created successfully"),
-        )),
+        Ok(result) => {
+            let filter = doc! { "_id": ObjectId::from_str(&middleware.0.sub).unwrap() };
+
+            let update = doc! {
+                "$push": { "address": result.inserted_id }
+            };
+
+            match user_collection.find_one_and_update(filter, update, None) {
+                Ok(_) => Json(ResponseWrapper::new(
+                    Status::Ok,
+                    String::from("UserAddress Created successfully"),
+                )),
+                Err(err) => Json(ResponseWrapper::message(
+                    Status::NotFound,
+                    format!(
+                        "Something Went Wrong While Creating user_address , {}",
+                        err.to_string()
+                    ),
+                )),
+            }
+        }
+
         Err(err) => Json(ResponseWrapper::message(
             Status::NotFound,
             format!(
@@ -154,22 +179,39 @@ pub fn update_user_address(
 pub fn delete_user_address(
     id: &str,
     db: &State<MongoDBState>,
-    _middleware: JwtToken,
+    middleware: JwtToken,
 ) -> Json<ResponseWrapper<String>> {
     // Get the user_addresses collection
     let db = db.inner().db();
     let collection: Collection<UserAddress> = db.collection::<UserAddress>(ADDRESSES);
+    let user_collection: Collection<User> = db.collection::<User>(USERS);
 
     // Delete the document into MongoDB
     match UserAddress::delete_resource(id, &collection) {
-        Ok(_) => Json(ResponseWrapper::message(
-            Status::Ok,
-            format!("UserAddress deleted successfully"),
-        )),
+        Ok(_) => {
+            let filter = doc! { "_id": ObjectId::from_str(&middleware.0.sub).unwrap() };
+
+            let update = doc! {
+                "$pull": { "address": ObjectId::from_str(id).unwrap() }
+            };
+            match user_collection.find_one_and_update(filter, update, None) {
+                Ok(_) => Json(ResponseWrapper::new(
+                    Status::Ok,
+                    String::from("UserAddress Deleted successfully"),
+                )),
+                Err(err) => Json(ResponseWrapper::message(
+                    Status::NotFound,
+                    format!(
+                        "Something Went Wrong While Deleting user_address , {}",
+                        err.to_string()
+                    ),
+                )),
+            }
+        }
         Err(err) => Json(ResponseWrapper::message(
             Status::NotFound,
             format!(
-                "Something Went Wrong While Getting user_address , {}",
+                "Something Went Wrong While Deleting user_address , {}",
                 err.to_string()
             ),
         )),
