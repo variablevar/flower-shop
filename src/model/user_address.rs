@@ -41,7 +41,7 @@ impl Into<Bson> for UserAddress {
             "state":self.state,
             "town":self.town,
             "zip":self.zip,
-            "phone":self.zip,
+            "phone":self.phone,
             "email":self.email
         })
     }
