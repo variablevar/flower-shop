@@ -36,15 +36,15 @@ extern crate rocket;
 async fn main() {
     rocket::build()
         .attach(CORS::init())
-        .register(
-            "/",
-            rocket::catchers![
-                unauthorized_error,
-                bad_request_error,
-                not_found_error,
-                unprocessable_entity_error,
-                conflict_error,
-                internal_server_error
+       .register(
+           "/",
+           rocket::catchers![
+               unauthorized_error,
+               bad_request_error,
+               not_found_error,
+               unprocessable_entity_error,
+               conflict_error,
+               internal_server_error
             ],
         )
         .manage(MongoDBState::init())

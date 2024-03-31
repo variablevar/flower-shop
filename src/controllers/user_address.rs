@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use mongodb::{
-    bson::{doc, oid::ObjectId},
+    bson::{doc, oid::ObjectId, Document},
     sync::Collection,
 };
 use rocket::{http::Status, serde::json::Json, State};
@@ -59,9 +59,20 @@ pub fn create_user_address(
     match UserAddress::insert_resource(&user_address.0, &collection) {
         Ok(result) => {
             let filter = doc! { "_id": ObjectId::from_str(&middleware.0.sub).unwrap() };
+            /*
+                let address = UserAddress::find_resource_by_object_id(
+                    result.inserted_id.as_object_id().unwrap(),
+                    &collection,
+                )
+                .unwrap()
+                .unwrap();
+            */
 
+            let address_doc = result.inserted_id.as_object_id().unwrap();
             let update = doc! {
-                "$push": { "address": result.inserted_id }
+                "$set":{
+                    "address":address_doc
+                }
             };
 
             match user_collection.find_one_and_update(filter, update, None) {

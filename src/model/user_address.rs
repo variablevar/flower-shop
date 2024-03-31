@@ -1,5 +1,5 @@
 use crate::etc::validations::Validations;
-use mongodb::bson::{bson, oid::ObjectId, Bson};
+use mongodb::bson::{bson, doc, oid::ObjectId, Bson, Document};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -31,8 +31,8 @@ pub type UserAddresses = Vec<UserAddress>;
 impl Into<Bson> for UserAddress {
     fn into(self) -> Bson {
         bson!( {
-            "firstName":self.first_name,
-            "lastName":self.last_name,
+            "first_name":self.first_name,
+            "last_name":self.last_name,
             "country":self.country,
             "street":{
                 "line1":self.street.line1,
@@ -44,5 +44,39 @@ impl Into<Bson> for UserAddress {
             "phone":self.phone,
             "email":self.email
         })
+    }
+}
+
+impl Into<Document> for Street {
+    fn into(self) -> Document {
+        doc! {
+            "line1": self.line1,
+            "line2": self.line2,
+        }
+    }
+}
+
+impl Into<Document> for UserAddress {
+    fn into(self) -> Document {
+        let mut doc = doc! {
+            "firstName": self.first_name,
+            "lastName": self.last_name,
+            "country": self.country,
+            "street": {
+                "line1": self.street.line1,
+                "line2": self.street.line2,
+            }, // Assuming Street also implements Into<Document>
+            "state": self.state,
+            "town": self.town,
+            "zip": self.zip,
+            "phone": self.phone,
+            "email": self.email,
+        };
+
+        if let Some(id) = self.id {
+            doc.insert("_id", id);
+        }
+
+        doc
     }
 }

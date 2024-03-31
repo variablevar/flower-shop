@@ -21,10 +21,11 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none")]
     last_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    address: Option<Vec<ObjectId>>,
+    address: Option<ObjectId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     password: Option<String>,
 }
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Login {
     email: String,

@@ -13,7 +13,7 @@ pub struct MongoDBState {
 
 impl MongoDBState {
     pub fn init() -> Self {
-        let uri = "mongodb://localhost:27017";
+        let uri = "mongodb+srv://dnfqqjv:PifjSQexkoTGTqPZ@flower-shop.66vvkxh.mongodb.net/?retryWrites=true&w=majority";
         let client = Client::with_uri_str(uri).unwrap();
         let db = client.database("flower-shop");
         let collection: Collection<User> = db.collection::<User>(USERS);

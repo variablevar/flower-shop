@@ -8,7 +8,7 @@ use mongodb::{
 use serde::{de::DeserializeOwned, Serialize};
 
 // Get _id
-fn object_id(id: &str) -> ObjectId {
+pub fn object_id(id: &str) -> ObjectId {
     ObjectId::from_str(&id).expect("Invalid resource Id")
 }
 pub trait Generic<
@@ -39,6 +39,19 @@ pub trait Generic<
         collection: &Collection<T>,
     ) -> Result<Option<T>, mongodb::error::Error> {
         let filter = doc! { "_id": object_id(&id) };
+
+        if let Some(document) = collection.find_one(filter, None)? {
+            Ok(Some(document))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn find_resource_by_object_id(
+        document: ObjectId,
+        collection: &Collection<T>,
+    ) -> Result<Option<T>, mongodb::error::Error> {
+        let filter = doc! { "_id": document };
 
         if let Some(document) = collection.find_one(filter, None)? {
             Ok(Some(document))

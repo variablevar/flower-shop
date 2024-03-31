@@ -63,10 +63,13 @@ pub fn get_user(db: &State<MongoDBState>, middleware: JwtToken) -> serde_json::V
     let db = db.inner().db();
     let collection: Collection<User> = db.collection::<User>(USERS);
 
-    // Get the document of user into MongoDB
     match User::find_resource_by_id(&middleware.0.sub, &collection) {
-        Ok(user) => json!({ "status": "success", "response": user.unwrap() }),
-        Err(_) => json!({ "status": "failed", "response": "Failed to get user" }),
+        Ok(user) => {
+            json!({ "status": "success", "response": user.unwrap() })
+        }
+        Err(err) => {
+            json!({ "status": "failed", "response": format!("Failed to get user , {}",err.to_string()) })
+        }
     }
 }
 
