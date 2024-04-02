@@ -5,9 +5,10 @@ pub mod etc;
 pub mod guards;
 pub mod model;
 pub mod services;
-use constants::strings::{ADDRESSES, BLOGS, PRODUCTS, USERS};
+use constants::strings::{ADDRESSES, BLOGS, ORDERS, PRODUCTS, USERS};
 use controllers::{
     blog::{create_blog, create_blogs, delete_blog, get_blog, get_blogs, update_blog},
+    order::place_order,
     product::{
         create_product, create_products, delete_product, get_product, get_products, update_product,
     },
@@ -36,15 +37,15 @@ extern crate rocket;
 async fn main() {
     rocket::build()
         .attach(CORS::init())
-       .register(
-           "/",
-           rocket::catchers![
-               unauthorized_error,
-               bad_request_error,
-               not_found_error,
-               unprocessable_entity_error,
-               conflict_error,
-               internal_server_error
+        .register(
+            "/",
+            rocket::catchers![
+                unauthorized_error,
+                bad_request_error,
+                not_found_error,
+                unprocessable_entity_error,
+                conflict_error,
+                internal_server_error
             ],
         )
         .manage(MongoDBState::init())
@@ -59,6 +60,7 @@ async fn main() {
                 delete_product
             ],
         )
+        .mount(format!("/{}", ORDERS), routes![place_order])
         .mount(
             format!("/{}", BLOGS),
             routes![

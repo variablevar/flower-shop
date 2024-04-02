@@ -65,11 +65,7 @@ pub fn create_product(
 }
 
 #[get("/<id>")]
-pub fn get_product<'a>(
-    id: &str,
-    db: &State<MongoDBState>,
-    _middleware: JwtToken,
-) -> Json<ResponseWrapper<Product>> {
+pub fn get_product<'a>(id: &str, db: &State<MongoDBState>) -> Json<ResponseWrapper<Product>> {
     // Get the products collection
     let db = db.inner().db();
     let collection: Collection<Product> = db.collection::<Product>(PRODUCTS);
@@ -126,7 +122,6 @@ pub fn update_product(
     id: &str,
     product: Json<Product>,
     db: &State<MongoDBState>,
-    _middleware: JwtToken,
 ) -> Json<ResponseWrapper<Product>> {
     // Get the products collection
     let db = db.inner().db();

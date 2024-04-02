@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use mongodb::{
-    bson::{doc, oid::ObjectId, Document},
+    bson::{doc, oid::ObjectId},
     sync::Collection,
 };
 use rocket::{http::Status, serde::json::Json, State};

@@ -1,4 +1,5 @@
 pub const PRODUCTS: &str = "products";
+pub const ORDERS: &str = "orders";
 pub const BLOGS: &str = "blogs";
 pub const USERS: &str = "users";
 pub const ADDRESSES: &str = "addresses";
